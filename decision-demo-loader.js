@@ -5,7 +5,7 @@
   if(window.__FERDA_ORLANDO_BOOTSTRAP__) return;
   window.__FERDA_ORLANDO_BOOTSTRAP__=true;
 
-  const VERSION='ferda-0.1.0';
+  const VERSION='ferda-0.1.1';
   const RELEASE_KEY='vp_orlando_demo_release'; // deliberately outside ffvp_* app data
   const ONBOARDING_METRICS_KEY='ffvp_orlando_onboarding_metrics';
   const ORLANDO_ZONE='America/New_York';
@@ -16,6 +16,7 @@
   let onboardingStart=0;
   let revealed=false;
   let releaseChanged=false;
+  let startupSafetyTimer=null;
 
   const qs=(s,r=document)=>r.querySelector(s);
   const qsa=(s,r=document)=>[...r.querySelectorAll(s)];
@@ -53,6 +54,18 @@
     if(bar) bar.style.width=`${Math.max(8,Math.min(100,p))}%`;
     setText(qs('#vpStartupStatus'),status);
     setText(qs('#vpStartupDetail'),detail);
+  }
+
+  function runStartupStep(label,step){
+    try{return step();}
+    catch(error){
+      console.error(`[FERDA startup] ${label} failed`,error);
+      try{
+        const errors=window.__VP_BOOT_ERRORS__||(window.__VP_BOOT_ERRORS__=[]);
+        errors.push({label,message:String(error?.message||error)});
+      }catch{}
+      return null;
+    }
   }
 
   function migrateReleaseOnce(){
@@ -221,7 +234,11 @@
   function revealApp(){
     if(revealed)return;
     revealed=true;
-    const onboarded=!!localStorage.getItem('ffvp_onboarded');
+    if(startupSafetyTimer!==null){clearTimeout(startupSafetyTimer);startupSafetyTimer=null;}
+    let onboarded=false;
+    try{onboarded=!!localStorage.getItem('ffvp_onboarded');}catch{}
+    document.body.classList.remove('vp-starting');
+    qs('#orlandoStartupStatus')?.remove();
     qs('#landingScreen')?.classList.add('hidden');
     if(!onboarded){
       startMetrics();
@@ -241,30 +258,38 @@
   // Do this immediately when the deferred script executes, not at DOMContentLoaded.
   // That prevents the old shell from visibly painting between app startup and our splash.
   injectSplash();
+  // Arm the escape hatch before any optional startup work. A DOM/customisation
+  // error must never be able to leave a traveller trapped behind the splash.
+  startupSafetyTimer=setTimeout(revealApp,SPLASH_MAX_MS);
   releaseChanged=migrateReleaseOnce();
   lockOldBetaLaunchFlags();
   splashProgress(releaseChanged?28:22,releaseChanged?'Updating FERDA safely':'Getting your Orlando trip ready…',releaseChanged?'Keeping your saved trip in place':'Preparing your trip tools');
 
   async function init(){
-    loadStyle(`/decision-demo.css?v=${VERSION}`,'vpDecisionDemoCss');
-    loadStyle(`/orlando-early-access.css?v=${VERSION}`,'vpOrlandoEarlyAccessCss');
-    markOrlandoOnly();
-    rewriteOnboarding();
-    wireOnboarding();
-    ensureTimeStrip();
-    syncOrlandoLocation();
-
+    // Schedule visible progress and normal completion first. Everything below is
+    // progressive enhancement and may fail without blocking access to the app.
     setTimeout(()=>splashProgress(58,'Connecting the planner…','Loading Orlando decision tools'),220);
-    const basePromise=loadScript(`/base-location.js?v=${VERSION}`,'vpBaseLocationRuntime');
-    const demoPromise=loadScript(`/decision-demo.js?v=${VERSION}`,'vpDecisionDemoRuntime');
-    Promise.allSettled([basePromise,demoPromise]).then(()=>{personalizeDecisionExperience();syncOrlandoLocation();});
-    loadScript(`/family-ui-test.js?v=${VERSION}`,'vpFamilyUiTestRuntime',1100).then(()=>{});
-
     setTimeout(()=>splashProgress(84,'Almost there…','Finishing your Orlando setup'),650);
     setTimeout(revealApp,1000);
-    setTimeout(revealApp,SPLASH_MAX_MS); // hard safety ceiling; guarded, never reopens the splash
-    setInterval(updateClocks,30000);
     window.__VP_BOOT_STATE__={version:VERSION,releaseChanged,get revealed(){return revealed;}};
+
+    runStartupStep('decision styles',()=>loadStyle(`/decision-demo.css?v=${VERSION}`,'vpDecisionDemoCss'));
+    runStartupStep('Orlando styles',()=>loadStyle(`/orlando-early-access.css?v=${VERSION}`,'vpOrlandoEarlyAccessCss'));
+    runStartupStep('Orlando shell',markOrlandoOnly);
+    runStartupStep('onboarding copy',rewriteOnboarding);
+    runStartupStep('onboarding controls',wireOnboarding);
+    runStartupStep('time strip',ensureTimeStrip);
+    runStartupStep('location context',syncOrlandoLocation);
+
+    const basePromise=runStartupStep('base runtime',()=>loadScript(`/base-location.js?v=${VERSION}`,'vpBaseLocationRuntime'))||Promise.resolve(false);
+    const demoPromise=runStartupStep('decision runtime',()=>loadScript(`/decision-demo.js?v=${VERSION}`,'vpDecisionDemoRuntime'))||Promise.resolve(false);
+    Promise.allSettled([basePromise,demoPromise]).then(()=>{
+      runStartupStep('decision personalisation',personalizeDecisionExperience);
+      runStartupStep('location resync',syncOrlandoLocation);
+    });
+    const familyPromise=runStartupStep('family runtime',()=>loadScript(`/family-ui-test.js?v=${VERSION}`,'vpFamilyUiTestRuntime',1100));
+    familyPromise?.then(()=>{});
+    setInterval(()=>runStartupStep('clock update',updateClocks),30000);
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();

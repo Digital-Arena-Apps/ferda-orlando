@@ -51,6 +51,12 @@ assert.ok(migration, 'release migration must exist');
 assert.doesNotMatch(migration, /removeItem|localStorage\.clear/, 'release migration must preserve user data');
 assert.match(migration, /localStorage\.setItem\(RELEASE_KEY,VERSION\)/, 'release migration must record its version');
 
+const startupSafety = loader.indexOf('startupSafetyTimer=setTimeout(revealApp,SPLASH_MAX_MS)');
+const startupInit = loader.indexOf('async function init()');
+assert.ok(startupSafety > -1 && startupSafety < startupInit, 'startup escape hatch must be armed before optional initialisation');
+assert.match(loader, /runStartupStep\('onboarding copy',rewriteOnboarding\)/, 'optional onboarding work must be error-isolated');
+assert.match(html, /decision-demo-loader\.js\?v=ferda-0\.1\.1/, 'the startup recovery loader must be cache-busted');
+
 const source = [html, app, family, serviceWorker].join('\n');
 const assetRefs = new Set(source.match(/assets\/ferda\/[A-Za-z0-9_./-]+\.(?:png|webp)/g) ?? []);
 assert.ok(assetRefs.size >= 16, 'FERDA production assets must be wired into the shell');
