@@ -123,7 +123,9 @@
     const p=profile(),hasBase=Number.isFinite(+p.homeBaseLat)&&Number.isFinite(+p.homeBaseLon);let inTrip=false;try{inTrip=!!(typeof tripContext==='function'&&tripContext()?.inTrip);}catch{}
     const current=planningOrigin==='current';const title=current?'Your current location':hasBase?(p.homeBase||'Your Orlando base'):'Orlando';
     const sub=current?'Updating while this app is open':hasBase?'Used as the starting point for plans':'Set your villa or hotel for more accurate travel times';
-    card.innerHTML=`<div class="vp-planning-origin-copy"><span>PLANNING FROM</span><b>${esc(title)}</b><small>${esc(sub)}</small></div><div class="vp-origin-actions">${hasBase?`<button type="button" data-origin="base" class="${!current?'active':''}">Base</button>`:''}${inTrip?`<button type="button" data-origin="current" class="${current?'active':''}">Use where I am</button>`:''}</div>`;
+    const markup=`<div class="vp-planning-origin-copy"><span>PLANNING FROM</span><b>${esc(title)}</b><small>${esc(sub)}</small></div><div class="vp-origin-actions">${hasBase?`<button type="button" data-origin="base" class="${!current?'active':''}">Base</button>`:''}${inTrip?`<button type="button" data-origin="current" class="${current?'active':''}">Use where I am</button>`:''}</div>`;
+    if(card.innerHTML===markup)return;
+    card.innerHTML=markup;
     $('[data-origin="base"]',card)?.addEventListener('click',useBase);$('[data-origin="current"]',card)?.addEventListener('click',startLiveLocation);
   }
   function patchDemoLocation(){
@@ -146,7 +148,7 @@
     buildPicker();applyPlanningAnchor();renderOriginCard();renderSelected();patchDemoLocation();
     const form=$('#onboardingForm');form?.addEventListener('submit',()=>setTimeout(()=>{applyPlanningAnchor();renderOriginCard();patchDemoLocation();},160));
     document.addEventListener('click',e=>{if(e.target.closest('[data-vp-open]'))setTimeout(patchDemoLocation,25);});
-    new MutationObserver(()=>{if($('#setupHomeBase')&&!$('#vpBasePicker'))buildPicker();if($('#orlandoTimeStrip'))renderOriginCard();}).observe(document.body,{childList:true,subtree:true});
+    new MutationObserver(()=>{if($('#setupHomeBase')&&!$('#vpBasePicker'))buildPicker();if($('#orlandoTimeStrip')&&!$('#vpPlanningOrigin'))renderOriginCard();}).observe(document.body,{childList:true,subtree:true});
     finishStartupSplash(splashStarted);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();

@@ -32,6 +32,7 @@ for (const file of scripts) {
 
 const html = read('index.html');
 const loader = read('decision-demo-loader.js');
+const baseLocation = read('base-location.js');
 const family = read('family-ui-test.js');
 const app = read('app.js');
 const serviceWorker = read('sw.js');
@@ -55,7 +56,9 @@ const startupSafety = loader.indexOf('startupSafetyTimer=setTimeout(revealApp,SP
 const startupInit = loader.indexOf('async function init()');
 assert.ok(startupSafety > -1 && startupSafety < startupInit, 'startup escape hatch must be armed before optional initialisation');
 assert.match(loader, /runStartupStep\('onboarding copy',rewriteOnboarding\)/, 'optional onboarding work must be error-isolated');
-assert.match(html, /decision-demo-loader\.js\?v=ferda-0\.1\.1/, 'the startup recovery loader must be cache-busted');
+assert.match(html, /decision-demo-loader\.js\?v=ferda-0\.1\.2/, 'the startup recovery loader must be cache-busted');
+assert.match(baseLocation, /if\(card\.innerHTML===markup\)return;/, 'origin rendering must not rewrite unchanged markup');
+assert.match(baseLocation, /if\(\$\('#orlandoTimeStrip'\)&&!\$\('#vpPlanningOrigin'\)\)renderOriginCard\(\)/, 'the DOM observer must not rewrite an existing origin card');
 
 const source = [html, app, family, serviceWorker].join('\n');
 const assetRefs = new Set(source.match(/assets\/ferda\/[A-Za-z0-9_./-]+\.(?:png|webp)/g) ?? []);

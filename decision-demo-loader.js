@@ -5,7 +5,7 @@
   if(window.__FERDA_ORLANDO_BOOTSTRAP__) return;
   window.__FERDA_ORLANDO_BOOTSTRAP__=true;
 
-  const VERSION='ferda-0.1.1';
+  const VERSION='ferda-0.1.2';
   const RELEASE_KEY='vp_orlando_demo_release'; // deliberately outside ffvp_* app data
   const ONBOARDING_METRICS_KEY='ffvp_orlando_onboarding_metrics';
   const ORLANDO_ZONE='America/New_York';
