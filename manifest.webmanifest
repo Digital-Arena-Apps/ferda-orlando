@@ -1,0 +1,23 @@
+{
+  "name": "FERDA — Orlando Family Travel Buddy",
+  "short_name": "FERDA",
+  "description": "A family-aware Orlando travel buddy that builds the plan and helps decide what comes next.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F7F1E5",
+  "theme_color": "#0B5D59",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
